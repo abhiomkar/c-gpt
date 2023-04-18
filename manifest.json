@@ -1,12 +1,20 @@
 {
   "name": "c-gpt",
-  "action": {},
   "manifest_version": 3,
   "version": "0.1",
   "description": "Summarise articles and ask follow-up questions using GPT-3 model.",
   "permissions": ["activeTab", "scripting", "storage"],
+  "action": { "default_popup": "popup/popup.html" },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
-  "options_page": "options/options.html"
+  "options_page": "options/options.html",
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
 }
