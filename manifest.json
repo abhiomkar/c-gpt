@@ -1,11 +1,12 @@
 {
-  "name": "Page Redder",
+  "name": "c-gpt",
   "action": {},
   "manifest_version": 3,
   "version": "0.1",
-  "description": "Turns the page red when you click the icon",
-  "permissions": ["activeTab", "scripting"],
+  "description": "Summarise articles and ask follow-up questions using GPT-3 model.",
+  "permissions": ["activeTab", "scripting", "storage"],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "options_page": "options/options.html"
 }
