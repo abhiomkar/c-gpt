@@ -1,8 +1,21 @@
+const reponseEl = document.querySelector('.response');
+
 document.querySelector('button').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-  const {tabUrl} = await chrome.tabs.sendMessage(tab.id, {tabUrl: ''});
-  const chatResponse = await sendChatMessage('What does this website do? ' + tabUrl);
-  document.querySelector('.response').innerText = chatResponse.choices[0]?.message?.content;
+  await chrome.scripting.executeScript({
+    target: {tabId: tab.id},
+    files: ['popup/external/@mozilla/readability/Readability.js'],
+  });
+
+  const {parsedTextContent} = await chrome.tabs.sendMessage(tab.id, {});
+  if (!parsedTextContent) {
+    reponseEl.innerText = 'Unable to parse the page content. Try on a different page.';
+    return;
+  }
+
+  reponseEl.innerText = 'Summarising...';
+  const chatResponse = await sendChatMessage('Summarise the following content in few bulletpoints:\n\n ' + parsedTextContent);
+  reponseEl.innerText = chatResponse.choices[0].message.content;
 });
 
 const API_ENDPOINT_URI = 'https://api.openai.com/v1/chat/completions';

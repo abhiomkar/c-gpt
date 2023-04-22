@@ -1,14 +1,12 @@
 chrome.runtime.onMessage.addListener(
   (request, sender, sendResponse) => {
-    const response = {};
-    
-    if (request.tabUrl !== undefined) {
-      response.tabUrl = document.URL;
-    }
+    const parsedTextContent = new window.__cgpt_Readability(document.cloneNode(true)).parse().textContent;
 
-    if (request.tabTitle !== undefined) {
-      response.tabTitle = document.title;
-    }
+    const response = {
+      tabUrl: document.URL,
+      tabTitle: document.title,
+      parsedTextContent: parsedTextContent,
+    };
 
     sendResponse(response);
   }
