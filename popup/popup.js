@@ -1,6 +1,7 @@
 document.querySelector('button').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-  const chatResponse = await sendChatMessage('What does this website do? ' + response.tabUrl);
+  const {tabUrl} = await chrome.tabs.sendMessage(tab.id, {tabUrl: ''});
+  const chatResponse = await sendChatMessage('What does this website do? ' + tabUrl);
   document.querySelector('.response').innerText = chatResponse.choices[0]?.message?.content;
 });
 
