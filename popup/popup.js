@@ -7,14 +7,16 @@ document.querySelector('button').addEventListener('click', async () => {
     files: ['popup/external/@mozilla/readability/Readability.js'],
   });
 
-  const {parsedTextContent} = await chrome.tabs.sendMessage(tab.id, {});
+  const {parsedTitle, parsedByline, parsedSiteName, parsedTextContent} = await chrome.tabs.sendMessage(tab.id, {});
   if (!parsedTextContent) {
     reponseEl.innerText = 'Unable to parse the page content. Try on a different page.';
     return;
   }
 
   reponseEl.innerText = 'Summarising...';
-  const chatResponse = await sendChatMessage('Summarise the following content in few bulletpoints:\n\n ' + parsedTextContent);
+  const prompt = 'Summarise the following content in few bulletpoints, start with a summary line:';
+  const fullPrompt = `${prompt}\n\n title: ${parsedTitle}\n Author: ${parsedByline}\n Site name: ${parsedSiteName}\n\n Article: ${parsedTextContent}`;
+  const chatResponse = await sendChatMessage(fullPrompt);
   reponseEl.innerText = chatResponse.choices[0].message.content;
 });
 
