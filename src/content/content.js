@@ -1,10 +1,13 @@
+import {Readability} from '@mozilla/readability';
+
 chrome.runtime.onMessage.addListener(
   (request, sender, sendResponse) => {
-    const {textContent, title, byline, siteName, lang} = new window.__cgpt_Readability(document.cloneNode(true)).parse();
+    const {textContent, title, byline, siteName, lang} = new Readability(document.cloneNode(true)).parse();
 
     const response = {
       tabUrl: document.URL,
       tabTitle: document.title,
+      tabHostname: document.location.hostname,
       parsedTextContent: textContent,
       parsedTitle: title,
       parsedByline: byline,

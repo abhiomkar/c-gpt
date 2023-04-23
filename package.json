@@ -1,0 +1,21 @@
+{
+  "name": "c-gpt",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "prestart": "rm -rf dist",
+    "start": "parcel watch src/manifest.json --host localhost --config @parcel/config-webextension",
+    "build": "parcel build src/manifest.json --config @parcel/config-webextension"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mozilla/readability": "^0.4.4",
+    "@parcel/config-webextension": "^2.8.3"
+  },
+  "devDependencies": {
+    "parcel": "^2.8.3"
+  }
+}
