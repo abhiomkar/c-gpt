@@ -1,7 +1,7 @@
 import {Readability} from '@mozilla/readability';
 
 chrome.runtime.onMessage.addListener(
-  (request, sender, sendResponse) => {
+  async (request, sender, sendResponse) => {
     const {textContent, title, byline, siteName, lang} = new Readability(document.cloneNode(true)).parse();
 
     const response = {

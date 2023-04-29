@@ -1,9 +1,12 @@
-.popup {
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
   height: 450px;
   overflow: hidden;
   width: 600px;
   font-family: -apple-system, BlinkMacSystemFont, "San Francisco", Helvetica, Arial, sans-serif;
-  font-size: 1rem;
   line-height: 1.5rem;
-  padding: 8px;
+  font-size: 16px;
 }
