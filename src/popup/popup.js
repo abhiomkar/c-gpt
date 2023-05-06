@@ -1,7 +1,6 @@
 import { sendChatRequest } from "./request";
 import { h, render } from 'preact';
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
-import sendIcon from 'url:../images/send.svg';
 
 export function ChatTextInput({onChatInput}) {
   const textareaRef = useRef(null);
@@ -15,6 +14,7 @@ export function ChatTextInput({onChatInput}) {
     if (!event.shiftKey && event.key === 'Enter') {
       event.preventDefault();
       submitForm(event.target.form);
+      autoResize(event);
       return;
     }
   }
