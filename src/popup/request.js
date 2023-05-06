@@ -25,27 +25,30 @@ async function request(data) {
   return response.json();
 }
 
-export async function sendChatRequest(message, {cacheKey}) {
+export async function sendChatRequest(messages, {cacheKey}) {
   const data = {
     "model": "gpt-3.5-turbo",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": message},
-    ]
+    "messages": messages,
   };
 
-  const result = await chrome.storage.session.get([cacheKey]);
-  let messages = result[cacheKey];
-  if (!messages) {
-    const response = await request(data);
-    messages = data.messages;
-    const {role, content} = response.choices[0].message;
-    messages.push({
-      role,
-      content,
-    });
-    await chrome.storage.session.set({ [cacheKey]: messages });
-  }
-
-  return messages.slice(2);
+  const response = await request(data);
+  // Sample response
+  // {
+  //   'id': 'chatcmpl-6p9XYPYSTTRi0xEviKjjilqrWU2Ve',
+  //   'object': 'chat.completion',
+  //   'created': 1677649420,
+  //   'model': 'gpt-3.5-turbo',
+  //   'usage': {'prompt_tokens': 56, 'completion_tokens': 31, 'total_tokens': 87},
+  //   'choices': [
+  //     {
+  //      'message': {
+  //        'role': 'assistant',
+  //        'content': 'The 2020 World Series was played in Arlington, Texas at the Globe Life Field, which was the new home stadium for the Texas Rangers.'},
+  //      'finish_reason': 'stop',
+  //      'index': 0
+  //     }
+  //    ]
+  //  }
+  const {role, content} = response.choices[0].message;
+  return {role, content};
 }

@@ -2,7 +2,7 @@ import { sendChatRequest } from "./request";
 import { h, render } from 'preact';
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 
-export function ChatTextInput({onChatInput}) {
+export function ChatTextInput({ onChatInput }) {
   const textareaRef = useRef(null);
   const baselineScrollHeight = useRef(0);
 
@@ -32,7 +32,7 @@ export function ChatTextInput({onChatInput}) {
 
   const submitForm = (form) => {
     const formData = new FormData(form);
-    const {chatInput} = Object.fromEntries(formData.entries());
+    const { chatInput } = Object.fromEntries(formData.entries());
     onChatInput(chatInput);
     form.reset();
   }
@@ -55,27 +55,31 @@ export function ChatTextInput({onChatInput}) {
   );
 }
 
-function SendIcon({height, width}) {
+function SendIcon({ height, width }) {
   return (
     <svg class="fill-current" xmlns="http://www.w3.org/2000/svg" height={height} viewBox="0 96 960 960" width={width}>
-      <path d="M120 896V256l760 320-760 320Zm60-93 544-227-544-230v168l242 62-242 60v167Zm0 0V346v457Z"/>
+      <path d="M120 896V256l760 320-760 320Zm60-93 544-227-544-230v168l242 62-242 60v167Zm0 0V346v457Z" />
     </svg>
   );
 }
 
 export function Popup(props) {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([{
+    "role": "system",
+    "content": "You are a helpful assistant.",
+  }]);
+  const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState('Summarising...');
+  const cacheKey = useRef('');
 
-  const readPageContent = async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const {parsedTitle, parsedByline, parsedSiteName, parsedTextContent, parsedLang, tabHostname} = await chrome.tabs.sendMessage(tab.id, {});
-    if (!parsedTextContent) {
-      setStatus('Unable to parse the page content. Try on a different page.');
-      return;
-    }
+  const readPageContentFromTab = async (tab) => {
+    return chrome.tabs.sendMessage(tab.id, {});
+  };
 
-    const prompt = `
+  const constructInitialPromptFromPageContent = (pageContent) => {
+    const { parsedTitle, parsedByline, parsedSiteName, parsedTextContent, parsedLang } = pageContent;
+
+    return `
     Summarize the following content in few words. Also summarise the following content in few bulletpoints, reply in ${parsedLang} language. Respond in markdown format: \n
 
     title: ${parsedTitle} \n
@@ -83,47 +87,59 @@ export function Popup(props) {
     Site name: ${parsedSiteName} \n
     Article: ${parsedTextContent}
     `;
+  };
+
+  useEffect(async () => {
+    let messagesData = [...messages];
+    let promptData = prompt;
+
+    if (messages.filter((message) => message.role === 'user').length === 0) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const pageContent = await readPageContentFromTab(tab);
+      cacheKey.current = `c-${tab.id}`;
+
+      if (!pageContent.parsedTextContent) {
+        setStatus('Unable to parse the page content. Try on a different page.');
+        return;
+      }
+
+      promptData = constructInitialPromptFromPageContent(pageContent);
+    }
+
+    messagesData = [...messagesData, { "role": "user", "content": promptData }];
+    setMessages(messagesData);
 
     try {
-      // const response = await sendChatRequest(prompt, {cacheKey: tabHostname+tab.id});
-      const response = [{content: `Functions and procedures in Postgres are not zero-cost abstractions, they're deducted from your performance budget. When you spend memory and CPU to manage a call stack, less of it is available to actually run queries. In severe cases that can manifest in some surprising ways, like unexplained latency spikes and replication lag.` }];
-      setMessages(response);
+      const response = await sendChatRequest(messagesData, { cacheKey: null });
+      //  Example response: [{content: `Functions and procedures in Postgres are not zero-cost abstractions, they're deducted from your performance budget. When you spend memory and CPU to manage a call stack, less of it is available to actually run queries. In severe cases that can manifest in some surprising ways, like unexplained latency spikes and replication lag.` }];
+      setMessages([...messagesData, response]);
       setStatus('');
     } catch (e) {
-      setStatus('Something went wrong. Try again.');
+      setStatus('Something went wrong. Try again. ' + e.toString());
       throw e;
     }
-  }
-
-  useEffect(() => {
-    readPageContent();
-  }, []);
-
-  const handleChatInput = (chatInput) => {
-    // TODO: add to messages list here.
-    // setMessages([chatInput]);
-  }
+  }, [prompt]);
 
   return (
-    <div class="px-4 py-2 dark:bg-gray-800 h-full">
+    <div class="px-4 py-2 dark:bg-gray-800 h-full overflow-y-auto">
       <Messages messages={messages} />
       <Status status={status} />
-      <ChatTextInput onChatInput={handleChatInput} />
+      <ChatTextInput onChatInput={(input) => setPrompt(input)} />
     </div>
   );
 }
 
-export function Messages({messages}) {
+export function Messages({ messages }) {
   return (
-    <div class="text-gray-700 dark:text-gray-200 pb-4 text-sm">
-      {messages.map((message) => (
-        <div class="whitespace-pre-wrap">{message.content}</div>
+    <div class="grid grid-cols-1 divide-y text-gray-700 dark:text-gray-200 pb-4 text-sm">
+      {messages.slice(2).map((message) => (
+        <div class="whitespace-pre-wrap "><strong>{message.role}:</strong> {message.content}</div>
       ))}
     </div>
   );
 }
 
-export function Status({status}) {
+export function Status({ status }) {
   if (!status) return;
 
   return (
