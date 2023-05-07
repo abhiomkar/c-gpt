@@ -63,14 +63,23 @@ function SendIcon({ height, width }) {
   );
 }
 
-export function Popup(props) {
-  const [messages, setMessages] = useState([{
-    "role": "system",
-    "content": "You are a helpful assistant.",
-  }]);
+async function getCacheKeyForCurrentTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabUrl = (tab.pendingUrl || tab.url).split('#')[0];
+  return `c-${tab.id}-${tabUrl}`;
+}
+
+function Popup() {
+  return (
+    <Chat />
+  );
+}
+
+function Chat() {
+  const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState('');
-  const [status, setStatus] = useState('Summarising...');
-  const cacheKey = useRef('');
+  const [status, setStatus] = useState('');
+  const [initialRender, setInitialRender] = useState(true);
 
   const readPageContentFromTab = async (tab) => {
     return chrome.tabs.sendMessage(tab.id, {});
@@ -90,13 +99,25 @@ export function Popup(props) {
   };
 
   useEffect(async () => {
+    if (initialRender) {
+      const cacheKey = await getCacheKeyForCurrentTab();
+      const cachedMessages = (await chrome.storage.session.get(cacheKey))[cacheKey];
+    
+      if (cachedMessages) {
+        setMessages(cachedMessages);
+        setInitialRender(false);
+        return;
+      }
+    }
+
     let messagesData = [...messages];
     let promptData = prompt;
-
-    if (messages.filter((message) => message.role === 'user').length === 0) {
+      
+    // Read the page content only on first render.
+    // This is to avoid reading the page content on every prompt change or when the chat is restored from cache.
+    if (messagesData.filter((message) => message.role === 'user').length === 0) {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       const pageContent = await readPageContentFromTab(tab);
-      cacheKey.current = `c-${tab.id}`;
 
       if (!pageContent.parsedTextContent) {
         setStatus('Unable to parse the page content. Try on a different page.');
@@ -104,14 +125,19 @@ export function Popup(props) {
       }
 
       promptData = constructInitialPromptFromPageContent(pageContent);
+      messagesData = [{
+        "role": "system",
+        "content": "You are a helpful assistant.",
+      }];
     }
 
     messagesData = [...messagesData, { "role": "user", "content": promptData }];
     setMessages(messagesData);
 
     try {
-      const response = await sendChatRequest(messagesData, { cacheKey: null });
-      //  Example response: [{content: `Functions and procedures in Postgres are not zero-cost abstractions, they're deducted from your performance budget. When you spend memory and CPU to manage a call stack, less of it is available to actually run queries. In severe cases that can manifest in some surprising ways, like unexplained latency spikes and replication lag.` }];
+      setStatus('Summarising...');
+      const response = await sendChatRequest(messagesData);
+      //  Example response: {content: 'foo bar content', role: 'assistant'};
       setMessages([...messagesData, response]);
       setStatus('');
     } catch (e) {
@@ -119,6 +145,11 @@ export function Popup(props) {
       throw e;
     }
   }, [prompt]);
+
+  useEffect(async () => {
+    const cacheKey = await getCacheKeyForCurrentTab();
+    chrome.storage.session.set({ [cacheKey]: messages });
+  }, [messages]);
 
   return (
     <div class="px-4 py-2 dark:bg-gray-800 h-full overflow-y-auto">

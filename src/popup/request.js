@@ -25,7 +25,7 @@ async function request(data) {
   return response.json();
 }
 
-export async function sendChatRequest(messages, {cacheKey}) {
+export async function sendChatRequest(messages) {
   const data = {
     "model": "gpt-3.5-turbo",
     "messages": messages,
