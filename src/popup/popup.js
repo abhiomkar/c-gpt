@@ -40,7 +40,7 @@ export function ChatTextInput({ onChatInput }) {
   return (
     <form
       onSubmit={handleSubmit}
-      class="flex flex-col w-full py-2 flex-grow md:py-3 md:pl-4 relative border border-black/10 bg-white dark:border-gray-900 dark:text-white dark:bg-gray-700 rounded-md shadow-[0_0_10px_rgba(0,0,0,0.10)]">
+      class="text-sm flex flex-col w-full py-2 flex-grow md:py-3 md:pl-4 relative border border-black/10 bg-white dark:border-gray-900 dark:text-white dark:bg-gray-700 rounded-md">
       <textarea
         onKeyDown={handleKeyDown}
         onInput={autoResize}
@@ -50,7 +50,7 @@ export function ChatTextInput({ onChatInput }) {
         ref={textareaRef}
         class="max-h-[200] outline-none m-0 w-full resize-none border-0 bg-transparent p-0 pr-7 focus:ring-0 focus-visible:ring-0 dark:bg-transparent pl-2 md:pl-0">
       </textarea>
-      <button type="submit" aria-label="Ask a question." class="absolute right-2 bottom-2 text-gray-600 dark:text-gray-200"><SendIcon height={24} width={24} /></button>
+      <button type="submit" aria-label="Ask a question." class="absolute right-2 inset-y-0 text-gray-600 dark:text-gray-200"><SendIcon height={24} width={24} /></button>
     </form>
   );
 }
@@ -80,6 +80,7 @@ function Chat() {
   const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState('');
   const [initialRender, setInitialRender] = useState(true);
+  const scrollableChatRef = useRef(null);
 
   const readPageContentFromTab = async (tab) => {
     return chrome.tabs.sendMessage(tab.id, {});
@@ -112,7 +113,7 @@ function Chat() {
 
     let messagesData = [...messages];
     let promptData = prompt;
-      
+
     // Read the page content only on first render.
     // This is to avoid reading the page content on every prompt change or when the chat is restored from cache.
     if (messagesData.filter((message) => message.role === 'user').length === 0) {
@@ -129,13 +130,15 @@ function Chat() {
         "role": "system",
         "content": "You are a helpful assistant.",
       }];
+      setStatus('Summarising...');
+    } else {
+      setStatus('Thinking...');
     }
 
     messagesData = [...messagesData, { "role": "user", "content": promptData }];
     setMessages(messagesData);
 
     try {
-      setStatus('Summarising...');
       const response = await sendChatRequest(messagesData);
       //  Example response: {content: 'foo bar content', role: 'assistant'};
       setMessages([...messagesData, response]);
@@ -149,20 +152,26 @@ function Chat() {
   useEffect(async () => {
     const cacheKey = await getCacheKeyForCurrentTab();
     chrome.storage.session.set({ [cacheKey]: messages });
+
+    scrollableChatRef.current.scrollTop = scrollableChatRef.current.scrollHeight;
   }, [messages]);
 
   return (
-    <div class="px-4 py-2 dark:bg-gray-800 h-full overflow-y-auto">
-      <Messages messages={messages} />
-      <Status status={status} />
-      <ChatTextInput onChatInput={(input) => setPrompt(input)} />
+    <div class="relative dark:bg-gray-800 h-full">
+      <div class="absolute overflow-y-auto h-[396] px-4 py-2" ref={scrollableChatRef}>
+        <Messages messages={messages} />
+      </div>
+      <div class="absolute inset-x-2 bottom-2">
+        <Status status={status} />
+        <ChatTextInput onChatInput={(input) => setPrompt(input)} />
+      </div>
     </div>
   );
 }
 
 export function Messages({ messages }) {
   return (
-    <div class="grid grid-cols-1 divide-y text-gray-700 dark:text-gray-200 pb-4 text-sm">
+    <div class="grid grid-cols-1 gap-2 text-gray-700 dark:text-gray-200 pb-4 text-sm">
       {messages.slice(2).map((message) => (
         <div class="whitespace-pre-wrap "><strong>{message.role}:</strong> {message.content}</div>
       ))}
@@ -174,7 +183,7 @@ export function Status({ status }) {
   if (!status) return;
 
   return (
-    <div class="text-gray-700 dark:text-gray-200 pb-4">{status}</div>
+    <div class="text-gray-700 dark:text-gray-200 px-1 py-2 font-medium text-sm">{status}</div>
   );
 }
 

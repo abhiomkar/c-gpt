@@ -4,10 +4,5 @@
 
 body {
   height: 450px;
-  overflow: hidden;
   width: 600px;
-  font-family: -apple-system, BlinkMacSystemFont, "San Francisco", Helvetica, Arial, sans-serif;
-  line-height: 1.5rem;
-  font-size: 16px;
-  overflow-y: auto;
 }
