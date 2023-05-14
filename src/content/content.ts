@@ -2,7 +2,7 @@ import {Readability} from '@mozilla/readability';
 
 chrome.runtime.onMessage.addListener(
   async (request, sender, sendResponse) => {
-    const {textContent, title, byline, siteName, lang} = new Readability(document.cloneNode(true)).parse();
+    const {textContent, title, byline, siteName, lang} = new Readability(document.cloneNode(true) as Document).parse() || {};
 
     const response = {
       tabUrl: document.URL,

@@ -4,5 +4,8 @@
       "pragma": "h",
       "pragmaFrag": "Fragment"
     }]
+  ],
+  "presets": [
+    "@babel/env", ["@babel/typescript", { "jsxPragma": "h" }]
   ]
 }

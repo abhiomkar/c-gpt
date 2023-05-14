@@ -16,8 +16,11 @@
     "preact": "^10.13.2"
   },
   "devDependencies": {
-    "@babel/plugin-transform-react-jsx": "^7.21.0",
+    "@babel/plugin-transform-react-jsx": "^7.21.5",
+    "@babel/preset-env": "^7.21.5",
+    "@babel/preset-typescript": "^7.21.5",
     "@parcel/config-webextension": "^2.8.3",
+    "@types/chrome": "^0.0.235",
     "parcel": "^2.8.3",
     "postcss": "^8.4.23",
     "tailwindcss": "^3.3.2"

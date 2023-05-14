@@ -3,10 +3,12 @@ import { h, render } from 'preact';
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 
 export function ChatTextInput({ onChatInput }) {
-  const textareaRef = useRef(null);
-  const baselineScrollHeight = useRef(0);
+  const textareaRef = useRef<HTMLInputElement>(null)!;
+  const baselineScrollHeight = useRef<number>(0);
 
   useLayoutEffect(() => {
+    if (!textareaRef.current) return;
+
     baselineScrollHeight.current = textareaRef.current.scrollHeight;
   }, []);
 
