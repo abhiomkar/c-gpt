@@ -1,9 +1,9 @@
 import { sendChatRequest } from "./request";
-import { h, render } from 'preact';
+import { h, render, FunctionComponent } from 'preact';
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 
-export function ChatTextInput({ onChatInput }) {
-  const textareaRef = useRef<HTMLInputElement>(null)!;
+const ChatTextInput: FunctionComponent<{onChatInput: Function}> = ({ onChatInput }) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)!;
   const baselineScrollHeight = useRef<number>(0);
 
   useLayoutEffect(() => {
@@ -12,30 +12,36 @@ export function ChatTextInput({ onChatInput }) {
     baselineScrollHeight.current = textareaRef.current.scrollHeight;
   }, []);
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (!(event.target instanceof HTMLTextAreaElement)) return;
+
     if (!event.shiftKey && event.key === 'Enter') {
       event.preventDefault();
-      submitForm(event.target.form);
+      submitForm(event.target.form!);
       autoResize(event);
       return;
     }
   }
 
-  const autoResize = (event) => {
+  const autoResize = (event: KeyboardEvent | InputEvent) => {
+    if (!(event.target instanceof HTMLTextAreaElement)) return;
+
     // auto resize textarea
     event.target.style.height = 'auto';
     event.target.style.height = event.target.scrollHeight + 'px';
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: SubmitEvent) => {
     event.preventDefault();
-    submitForm(event.target.form)
+    if (!(event.target instanceof HTMLTextAreaElement)) return;
+    if (!event.target) return;
+
+    submitForm(event.target.form!)
   }
 
-  const submitForm = (form) => {
+  const submitForm = (form: HTMLFormElement) => {
     const formData = new FormData(form);
-    const { chatInput } = Object.fromEntries(formData.entries());
-    onChatInput(chatInput);
+    onChatInput(formData.get('chatInput') || '');
     form.reset();
   }
 
@@ -46,7 +52,7 @@ export function ChatTextInput({ onChatInput }) {
       <textarea
         onKeyDown={handleKeyDown}
         onInput={autoResize}
-        rows="1"
+        rows={1}
         name="chatInput"
         placeholder="Ask a question."
         ref={textareaRef}
@@ -57,7 +63,7 @@ export function ChatTextInput({ onChatInput }) {
   );
 }
 
-function SendIcon({ height, width }) {
+const SendIcon: FunctionComponent<{ height: number, width: number }> = ({ height, width }) => {
   return (
     <svg class="fill-current" xmlns="http://www.w3.org/2000/svg" height={height} viewBox="0 96 960 960" width={width}>
       <path d="M120 896V256l760 320-760 320Zm60-93 544-227-544-230v168l242 62-242 60v167Zm0 0V346v457Z" />
@@ -67,7 +73,7 @@ function SendIcon({ height, width }) {
 
 async function getCacheKeyForCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const tabUrl = (tab.pendingUrl || tab.url).split('#')[0];
+  const tabUrl = (tab.pendingUrl || tab.url || '').split('#')[0];
   return `c-${tab.id}-${tabUrl}`;
 }
 
@@ -77,20 +83,23 @@ function Popup() {
   );
 }
 
+interface MessageContent {
+  role: string;
+  content: string;
+}
+
 function Chat() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Array<MessageContent>>([]);
   const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState('');
   const [initialRender, setInitialRender] = useState(true);
-  const scrollableChatRef = useRef(null);
+  const scrollableChatRef = useRef<HTMLInputElement>(null);
 
-  const readPageContentFromTab = async (tab) => {
-    return chrome.tabs.sendMessage(tab.id, {});
+  const readPageContentFromTabId = async (tabId: number) => {
+    return chrome.tabs.sendMessage(tabId, {});
   };
 
-  const constructInitialPromptFromPageContent = (pageContent) => {
-    const { parsedTitle, parsedByline, parsedSiteName, parsedTextContent, parsedLang } = pageContent;
-
+  const constructInitialPromptFromPageContent = ({ parsedTitle, parsedByline, parsedSiteName, parsedTextContent, parsedLang }: { parsedTitle: string, parsedByline: string, parsedSiteName: string, parsedTextContent: string, parsedLang: string }) => {
     return `
     Summarize the following content in few words. Also summarise the following content in few bulletpoints, reply in ${parsedLang} language. Respond in markdown format: \n
 
@@ -101,61 +110,69 @@ function Chat() {
     `;
   };
 
-  useEffect(async () => {
-    if (initialRender) {
-      const cacheKey = await getCacheKeyForCurrentTab();
-      const cachedMessages = (await chrome.storage.session.get(cacheKey))[cacheKey];
-    
-      if (cachedMessages) {
-        setMessages(cachedMessages);
-        setInitialRender(false);
-        return;
-      }
-    }
-
-    let messagesData = [...messages];
-    let promptData = prompt;
-
-    // Read the page content only on first render.
-    // This is to avoid reading the page content on every prompt change or when the chat is restored from cache.
-    if (messagesData.filter((message) => message.role === 'user').length === 0) {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      const pageContent = await readPageContentFromTab(tab);
-
-      if (!pageContent.parsedTextContent) {
-        setStatus('Unable to parse the page content. Try on a different page.');
-        return;
+  useEffect(() => {
+    (async () => {
+      if (initialRender) {
+        const cacheKey = await getCacheKeyForCurrentTab();
+        const cachedMessages = (await chrome.storage.session.get(cacheKey))[cacheKey];
+      
+        if (cachedMessages) {
+          setMessages(cachedMessages);
+          setInitialRender(false);
+          return;
+        }
       }
 
-      promptData = constructInitialPromptFromPageContent(pageContent);
-      messagesData = [{
-        "role": "system",
-        "content": "You are a helpful assistant.",
-      }];
-      setStatus('Summarising...');
-    } else {
-      setStatus('Thinking...');
-    }
+      let messagesData = [...messages];
+      let promptData = prompt;
 
-    messagesData = [...messagesData, { "role": "user", "content": promptData }];
-    setMessages(messagesData);
+      // Read the page content only on first render.
+      // This is to avoid reading the page content on every prompt change or when the chat is restored from cache.
+      if (messagesData.filter((message) => message.role === 'user').length === 0) {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab.id === undefined) throw new Error('Tab id is not a number.');
+        const pageContent = await readPageContentFromTabId(tab.id);
 
-    try {
-      const response = await sendChatRequest(messagesData);
-      //  Example response: {content: 'foo bar content', role: 'assistant'};
-      setMessages([...messagesData, response]);
-      setStatus('');
-    } catch (e) {
-      setStatus('Something went wrong. Try again. ' + e.toString());
-      throw e;
-    }
+        if (!pageContent.parsedTextContent) {
+          setStatus('Unable to parse the page content. Try on a different page.');
+          return;
+        }
+
+        promptData = constructInitialPromptFromPageContent(pageContent);
+        messagesData = [{
+          "role": "system",
+          "content": "You are a helpful assistant.",
+        }];
+        setStatus('Summarising...');
+      } else {
+        setStatus('Thinking...');
+      }
+
+      messagesData = [...messagesData, { "role": "user", "content": promptData }];
+      setMessages(messagesData);
+
+      try {
+        const response = await sendChatRequest(messagesData);
+        //  Example response: {content: 'foo bar content', role: 'assistant'};
+        setMessages([...messagesData, response]);
+        setStatus('');
+      } catch (e) {
+        setStatus('Something went wrong. Try again. ' + e.toString());
+        throw e;
+      }
+    })();
   }, [prompt]);
 
-  useEffect(async () => {
-    const cacheKey = await getCacheKeyForCurrentTab();
-    chrome.storage.session.set({ [cacheKey]: messages });
+  useEffect(() => {
+    (async () => {
+      const cacheKey = await getCacheKeyForCurrentTab();
+      chrome.storage.session.set({ [cacheKey]: messages });
 
-    scrollableChatRef.current.scrollTop = scrollableChatRef.current.scrollHeight;
+      if (!(scrollableChatRef.current instanceof HTMLElement)) {
+        throw new Error('scrollableChatRef is not an instance of HTMLElement.');
+      }
+      scrollableChatRef.current.scrollTop = scrollableChatRef.current.scrollHeight;
+    })();
   }, [messages]);
 
   return (
@@ -165,13 +182,13 @@ function Chat() {
       </div>
       <div class="absolute inset-x-2 bottom-2">
         <Status status={status} />
-        <ChatTextInput onChatInput={(input) => setPrompt(input)} />
+        <ChatTextInput onChatInput={(input: string) => setPrompt(input)} />
       </div>
     </div>
   );
 }
 
-export function Messages({ messages }) {
+const Messages: FunctionComponent<{ messages: Array<MessageContent> }> = ({ messages }) => {
   return (
     <div class="grid grid-cols-1 gap-2 text-gray-700 dark:text-gray-200 pb-4 text-sm">
       {messages.slice(2).map((message) => (
@@ -181,12 +198,15 @@ export function Messages({ messages }) {
   );
 }
 
-export function Status({ status }) {
-  if (!status) return;
-
+const Status: FunctionComponent<{ status: string }> = ({ status }) => {
   return (
     <div class="text-gray-700 dark:text-gray-200 px-1 py-2 font-medium text-sm">{status}</div>
   );
 }
 
-render(<Popup />, document.getElementById("popup"));
+const popupEl = document.getElementById('popup');
+if (popupEl) {
+  render(<Popup />, popupEl);  
+} else {
+  throw new Error('popup element not found');
+}

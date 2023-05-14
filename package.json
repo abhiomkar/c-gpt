@@ -24,5 +24,8 @@
   },
   "alias": {
     "preact/jsx-dev-runtime": "preact/jsx-runtime"
+  },
+  "aliasComments": {
+    "preact/jsx-dev-runtime": "Known issue in parcel.js which requires aliasing. See https://github.com/parcel-bundler/parcel/issues/7772#issuecomment-1463450378"
   }
 }
