@@ -1,6 +1,7 @@
 import { sendChatRequest } from "./request";
-import { h, render, FunctionComponent } from 'preact';
+import { h, render, FunctionComponent, ComponentChildren, ComponentType } from 'preact';
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
+import { SendIcon, AssistantIcon, UserIcon, TypingAnimation } from '../icons/icons';
 
 const ChatTextInput: FunctionComponent<{onChatInput: Function}> = ({ onChatInput }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)!;
@@ -59,22 +60,15 @@ const ChatTextInput: FunctionComponent<{onChatInput: Function}> = ({ onChatInput
         ref={textareaRef}
         class="max-h-[200] outline-none m-0 w-full resize-none border-0 bg-transparent p-0 pr-7 focus:ring-0 focus-visible:ring-0 dark:bg-transparent pl-2 md:pl-0">
       </textarea>
-      <button type="submit" aria-label="Ask a question." class="absolute right-2 inset-y-0 text-gray-600 dark:text-gray-200"><SendIcon height={24} width={24} /></button>
+      <button type="submit" aria-label="Ask a question." class="absolute right-2 inset-y-0 text-gray-600 dark:text-gray-200"><SendIcon /></button>
     </form>
-  );
-}
-
-const SendIcon: FunctionComponent<{ height: number, width: number }> = ({ height, width }) => {
-  return (
-    <svg class="fill-current" xmlns="http://www.w3.org/2000/svg" height={height} viewBox="0 96 960 960" width={width}>
-      <path d="M120 896V256l760 320-760 320Zm60-93 544-227-544-230v168l242 62-242 60v167Zm0 0V346v457Z" />
-    </svg>
   );
 }
 
 async function getCacheKeyForCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const tabUrl = (tab.pendingUrl || tab.url || '').split('#')[0];
+
   return `c-${tab.id}-${tabUrl}`;
 }
 
@@ -94,20 +88,25 @@ function Chat() {
   const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState('');
   const [initialRender, setInitialRender] = useState(true);
+  const [isAwaitingNetworkRequest, setIsAwaitingNetworkRequest] = useState(false);
   const scrollableChatRef = useRef<HTMLInputElement>(null);
 
   const readPageContentFromTabId = async (tabId: number) => {
     return chrome.tabs.sendMessage(tabId, {});
   };
 
+  const promptDelimitor = `CGPT_${Math.floor(Math.random() * 100000)}`;
   const constructInitialPromptFromPageContent = ({ parsedTitle, parsedByline, parsedSiteName, parsedTextContent, parsedLang }: { parsedTitle: string, parsedByline: string, parsedSiteName: string, parsedTextContent: string, parsedLang: string }) => {
     return `
-    Summarize the following content in few words. Also summarise the following content in few bulletpoints, reply in ${parsedLang} language. Respond in markdown format: \n
-
+    Summarize the text delimited by word ${promptDelimitor} in 20 words.
+    The summary should be in ${parsedLang} language.
+    \n
+    ${promptDelimitor}
     title: ${parsedTitle} \n
     Author: ${parsedByline} \n
     Site name: ${parsedSiteName} \n
     Article: ${parsedTextContent}
+    ${promptDelimitor}
     `;
   };
 
@@ -144,22 +143,22 @@ function Chat() {
           "role": "system",
           "content": "You are a helpful assistant.",
         }];
-        setStatus('Summarising...');
-      } else {
-        setStatus('Thinking...');
-      }
+      } 
 
       messagesData = [...messagesData, { "role": "user", "content": promptData }];
       setMessages(messagesData);
 
       try {
+        setIsAwaitingNetworkRequest(true);
         const response = await sendChatRequest(messagesData);
         //  Example response: {content: 'foo bar content', role: 'assistant'};
         setMessages([...messagesData, response]);
         setStatus('');
-      } catch (e) {
+      } catch (e: any) {
         setStatus('Something went wrong. Try again. ' + e.toString());
         throw e;
+      } finally {
+        setIsAwaitingNetworkRequest(false);
       }
     })();
   }, [prompt]);
@@ -178,8 +177,9 @@ function Chat() {
 
   return (
     <div class="relative dark:bg-gray-800 h-full">
-      <div class="absolute overflow-y-auto h-[396] px-4 py-2" ref={scrollableChatRef}>
+      <div class="absolute overflow-y-auto h-[396] w-full" ref={scrollableChatRef}>
         <Messages messages={messages} />
+        {isAwaitingNetworkRequest ? (<Message role='assistant'><TypingAnimation /></Message>) : null}
       </div>
       <div class="absolute inset-x-2 bottom-2">
         <Status status={status} />
@@ -191,13 +191,28 @@ function Chat() {
 
 const Messages: FunctionComponent<{ messages: Array<MessageContent> }> = ({ messages }) => {
   return (
-    <div class="grid grid-cols-1 gap-2 text-gray-700 dark:text-gray-200 pb-4 text-sm">
+    <div class="grid grid-cols-1">
       {messages.slice(2).map((message) => (
-        <div class="whitespace-pre-wrap "><strong>{message.role}:</strong> {message.content}</div>
+        <Message role={message.role}>{message.content}</Message>
       ))}
     </div>
   );
-}
+};
+
+const Message: FunctionComponent<{ role: string, children: ComponentChildren}> = ({ role, children }) => {
+  return (
+    <div class={role === 'user' ? 'bg-gray-100 dark:bg-gray-700' : ''}>
+      <div class="flex gap-4 px-4 py-4 text-gray-700 dark:text-gray-200 pb-4 text-sm">
+        <div class="flex-none">
+          {role === 'user' ? (<UserIcon />) : (<AssistantIcon />)}
+        </div>
+        <div class="whitespace-pre-wrap flex-auto flex items-center">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Status: FunctionComponent<{ status: string }> = ({ status }) => {
   return (
