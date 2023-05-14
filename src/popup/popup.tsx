@@ -50,6 +50,7 @@ const ChatTextInput: FunctionComponent<{onChatInput: Function}> = ({ onChatInput
       onSubmit={handleSubmit}
       class="text-sm flex flex-col w-full py-2 flex-grow md:py-3 md:pl-4 relative border border-black/10 bg-white dark:border-gray-900 dark:text-white dark:bg-gray-700 rounded-md">
       <textarea
+        autofocus
         onKeyDown={handleKeyDown}
         onInput={autoResize}
         rows={1}
@@ -113,12 +114,13 @@ function Chat() {
   useEffect(() => {
     (async () => {
       if (initialRender) {
+        setInitialRender(false);
+
         const cacheKey = await getCacheKeyForCurrentTab();
         const cachedMessages = (await chrome.storage.session.get(cacheKey))[cacheKey];
       
         if (cachedMessages) {
           setMessages(cachedMessages);
-          setInitialRender(false);
           return;
         }
       }
@@ -126,8 +128,7 @@ function Chat() {
       let messagesData = [...messages];
       let promptData = prompt;
 
-      // Read the page content only on first render.
-      // This is to avoid reading the page content on every prompt change or when the chat is restored from cache.
+      // Avoid reading the page content on every prompt change.
       if (messagesData.filter((message) => message.role === 'user').length === 0) {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab.id === undefined) throw new Error('Tab id is not a number.');
