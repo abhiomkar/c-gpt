@@ -49,7 +49,7 @@ const ChatTextInput: FunctionComponent<{onChatInput: Function}> = ({ onChatInput
   return (
     <form
       onSubmit={handleSubmit}
-      class="text-sm flex flex-col w-full py-2 flex-grow md:py-3 md:pl-4 relative border border-black/10 bg-white dark:border-gray-900 dark:text-white dark:bg-gray-700 rounded-md">
+      class="text-sm flex flex-col w-full py-2 flex-grow relative border border-black/10 bg-white dark:border-gray-900 dark:text-white dark:bg-gray-700 rounded-md">
       <textarea
         autofocus
         onKeyDown={handleKeyDown}
@@ -99,6 +99,9 @@ function Chat() {
   const constructInitialPromptFromPageContent = ({ parsedTitle, parsedByline, parsedSiteName, parsedTextContent, parsedLang }: { parsedTitle: string, parsedByline: string, parsedSiteName: string, parsedTextContent: string, parsedLang: string }) => {
     return `
     Summarize the text delimited by word ${promptDelimitor} in 20 words.
+    Display highlights of the text in at most 4 bullet points in descending order of importance.
+    Output in two sections with heading "Summary" and "Highlights".
+    Each highlight item should use dot unicode character as bullet icon.
     The summary should be in ${parsedLang} language.
     \n
     ${promptDelimitor}
@@ -143,6 +146,7 @@ function Chat() {
           "role": "system",
           "content": "You are a helpful assistant.",
         }];
+        setStatus('Summarising...');
       } 
 
       messagesData = [...messagesData, { "role": "user", "content": promptData }];
@@ -176,18 +180,37 @@ function Chat() {
   }, [messages]);
 
   return (
-    <div class="relative dark:bg-gray-800 h-full">
-      <div class="absolute overflow-y-auto h-[396] w-full" ref={scrollableChatRef}>
+    <div class="relative dark:bg-gray-800 h-full text-gray-700 dark:text-gray-200 flex flex-col justify-between pb-3">
+      <div class="inset-x-0 top-0">
+        <ChatHeader status={status} />
+      </div>
+      <div class="overflow-y-auto h-[398] w-full" ref={scrollableChatRef}>
         <Messages messages={messages} />
         {isAwaitingNetworkRequest ? (<Message role='assistant'><TypingAnimation /></Message>) : null}
       </div>
-      <div class="absolute inset-x-2 bottom-2">
-        <Status status={status} />
+      <div class="px-3">
         <ChatTextInput onChatInput={(input: string) => setPrompt(input)} />
       </div>
     </div>
   );
 }
+
+const ChatHeader: FunctionComponent<{ status: string}> = ({status}) => {
+  const optionsClickHandler = () => {
+    chrome.runtime.openOptionsPage();
+  };
+
+  return (
+    <div class="w-full text-xs flex justify-between border-b dark:border-gray-700 dark:bg-gray-800 py-2">
+      <div class="px-4 flex gap-1 text-gray-500 dark:text-gray-400">
+        <Status status={status} />
+      </div>
+      <div class="px-4">
+        <a class="hover:underline hover:cursor-pointer p-2" onClick={optionsClickHandler}>Options</a>
+      </div>
+    </div>
+  );
+};
 
 const Messages: FunctionComponent<{ messages: Array<MessageContent> }> = ({ messages }) => {
   return (
@@ -216,7 +239,7 @@ const Message: FunctionComponent<{ role: string, children: ComponentChildren}> =
 
 const Status: FunctionComponent<{ status: string }> = ({ status }) => {
   return (
-    <div class="text-gray-700 dark:text-gray-200 px-1 py-2 font-medium text-sm">{status}</div>
+    <div>{status}</div>
   );
 }
 
