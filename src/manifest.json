@@ -6,33 +6,7 @@
     "128": "images/logo.png"
   },
   "description": "Summarise articles and ask follow-up questions using LLMs such as OpenAI's GPT (Chat GPT).",
-  "custom_config": {
-    "extra_description": "Helps summarise and highlights main points of any article, without having to read the whole article. You can also ask follow-up questions about the article, and it will provide you with answers based on page contents of a current tab.",
-    "privacy_single_purpose": "Helps summarise and highlights main points of any article, without having to read the whole article. Also allows users to ask follow-up questions about the article, and it will provide answers based on page contents of a current tab.",
-    "justifications": {
-      "activeTab": "Required to read the text-only contents of a current tab",
-      "scripting": "Parses the text content of a current page to summarise and answer follow-up questions",
-      "storage": "Stores user preferences and settings",
-      "remote_code": "Makes call to LLM APIs such as OpenAI's GPT (Chat GPT) Chat APIs to summarise articles"
-    }
-  },
   "permissions": ["activeTab", "scripting", "storage"],
   "action": { "default_popup": "popup/popup.html" },
-  "options_page": "options/options.html",
-  "optional_host_permissions": [
-    "https://*/*",
-    "http://*/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content/content.ts"]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["options/options.html"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "options_page": "options/options.html"
 }

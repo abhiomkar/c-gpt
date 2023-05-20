@@ -87,6 +87,11 @@ function Chat() {
   const scrollableChatRef = useRef<HTMLInputElement>(null);
 
   const readPageContentFromTabId = async (tabId: number) => {
+    const contentFile = new URL('../content/content.ts', import.meta.url);
+    await chrome.scripting.executeScript({
+      target: {tabId: tabId},
+      files: [contentFile.pathname],
+    });
     return chrome.tabs.sendMessage(tabId, {});
   };
 
