@@ -5,8 +5,8 @@
   "scripts": {
     "prestart": "rm -rf dist",
     "start": "parcel watch src/manifest.json --host localhost --config @parcel/config-webextension",
-    "prebuild": "rm -rf dist",
-    "build": "parcel build src/manifest.json --config @parcel/config-webextension"
+    "prebuild": "rm -rf dist && rm -rf ~/Downloads/c-gpt.zip",
+    "build": "parcel build src/manifest.json --config @parcel/config-webextension && zip -r ~/Downloads/c-gpt.zip dist/"
   },
   "keywords": [],
   "author": "",
