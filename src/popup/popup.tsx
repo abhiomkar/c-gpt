@@ -110,44 +110,44 @@ function Chat() {
 
   useEffect(() => {
     (async () => {
-      if (initialRender) {
-        setInitialRender(false);
-
-        const cacheKey = await getCacheKeyForCurrentTab();
-        const cachedMessages = (await chrome.storage.session.get(cacheKey))[cacheKey];
-      
-        if (cachedMessages && cachedMessages.filter((message: MessageContent) => message.role === 'assistant').length > 0) {
-          setMessages(cachedMessages);
-          return;
-        }
-      }
-
-      let messagesData = [...messages];
-      let promptData = prompt;
-
-      // Avoid reading the page content on every prompt change.
-      if (messagesData.filter((message) => message.role === 'assistant').length === 0) {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab.id === undefined) throw new Error('Tab id is not a number.');
-        const pageContent = await readPageContentFromTabId(tab.id);
-
-        if (!pageContent.parsedTextContent) {
-          setStatus('Unable to parse the page content. Try on a different page.');
-          return;
-        }
-
-        promptData = constructInitialPromptFromPageContent(pageContent);
-        messagesData = [{
-          "role": "system",
-          "content": "You are a helpful assistant.",
-        }];
-        setStatus('Summarising...');
-      } 
-
-      messagesData = [...messagesData, { "role": "user", "content": promptData }];
-      setMessages(messagesData);
-
       try {
+        if (initialRender) {
+          setInitialRender(false);
+
+          const cacheKey = await getCacheKeyForCurrentTab();
+          const cachedMessages = (await chrome.storage.session.get(cacheKey))[cacheKey];
+        
+          if (cachedMessages && cachedMessages.filter((message: MessageContent) => message.role === 'assistant').length > 0) {
+            setMessages(cachedMessages);
+            return;
+          }
+        }
+
+        let messagesData = [...messages];
+        let promptData = prompt;
+
+        // Avoid reading the page content on every prompt change.
+        if (messagesData.filter((message) => message.role === 'assistant').length === 0) {
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (tab.id === undefined) throw new Error('Tab id is not a number.');
+          const pageContent = await readPageContentFromTabId(tab.id);
+
+          if (!pageContent.parsedTextContent) {
+            setStatus('Unable to parse the page content. Try on a different page.');
+            return;
+          }
+
+          promptData = constructInitialPromptFromPageContent(pageContent);
+          messagesData = [{
+            "role": "system",
+            "content": "You are a helpful assistant.",
+          }];
+          setStatus('Summarising...');
+        } 
+
+        messagesData = [...messagesData, { "role": "user", "content": promptData }];
+        setMessages(messagesData);
+
         setIsAwaitingNetworkRequest(true);
         const response = await sendChatRequest(messagesData);
         //  Example response: {content: 'foo bar content', role: 'assistant'};
