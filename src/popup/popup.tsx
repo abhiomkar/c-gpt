@@ -1,4 +1,4 @@
-import { sendChatRequest } from "./request";
+import { sendChatRequest, MessageContent } from "./request";
 import { h, render, FunctionComponent, ComponentChildren, ComponentType } from 'preact';
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 import { SendIcon, AssistantIcon, UserIcon, TypingAnimation } from '../icons/icons';
@@ -78,11 +78,6 @@ function Popup() {
   );
 }
 
-interface MessageContent {
-  role: string;
-  content: string;
-}
-
 function Chat() {
   const [messages, setMessages] = useState<Array<MessageContent>>([]);
   const [prompt, setPrompt] = useState('');
@@ -121,7 +116,7 @@ function Chat() {
         const cacheKey = await getCacheKeyForCurrentTab();
         const cachedMessages = (await chrome.storage.session.get(cacheKey))[cacheKey];
       
-        if (cachedMessages) {
+        if (cachedMessages && cachedMessages.filter((message: MessageContent) => message.role === 'assistant').length > 0) {
           setMessages(cachedMessages);
           return;
         }
@@ -131,7 +126,7 @@ function Chat() {
       let promptData = prompt;
 
       // Avoid reading the page content on every prompt change.
-      if (messagesData.filter((message) => message.role === 'user').length === 0) {
+      if (messagesData.filter((message) => message.role === 'assistant').length === 0) {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab.id === undefined) throw new Error('Tab id is not a number.');
         const pageContent = await readPageContentFromTabId(tab.id);

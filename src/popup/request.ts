@@ -1,9 +1,12 @@
 const API_ENDPOINT_URI = 'https://api.openai.com/v1/chat/completions';
 
-async function request(data) {
+async function request(body: string) {
   // Create the request headers
   const headers = new Headers();
   const {APIKey} = await chrome.storage.sync.get(["APIKey"]);
+  if (!APIKey) {
+    chrome.runtime.openOptionsPage();
+  }
 
   headers.append('Authorization', `Bearer ${APIKey}`);
   headers.append('Content-Type', 'application/json');
@@ -12,7 +15,7 @@ async function request(data) {
   const options = {
     method: 'POST',
     headers,
-    body: JSON.stringify(data),
+    body: body,
   };
 
   // Send the request
@@ -25,13 +28,18 @@ async function request(data) {
   return response.json();
 }
 
-export async function sendChatRequest(messages) {
+export interface MessageContent {
+  role: string;
+  content: string;
+}
+
+export async function sendChatRequest(messages: Array<MessageContent>): Promise<MessageContent> {
   const data = {
     "model": "gpt-3.5-turbo",
     "messages": messages,
   };
 
-  const response = await request(data);
+  const response = await request(JSON.stringify(data));
   // Sample response
   // {
   //   'id': 'chatcmpl-6p9XYPYSTTRi0xEviKjjilqrWU2Ve',

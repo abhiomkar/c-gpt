@@ -26,10 +26,10 @@ export const AssistantIcon: FunctionComponent<{ height?: number, width?: number 
 
 export const TypingAnimation = () => {
   return (
-    <div class="flex gap-0.5 dark:bg-gray-800">
-      <span class="flex h-2 w-2 animate-bounce rounded-full bg-current"></span>
-      <span class="flex h-2 w-2 animate-bounce rounded-full bg-current animation-delay-100"></span>
-      <span class="flex h-2 w-2 animate-bounce rounded-full bg-current animation-delay-200"></span>
+    <div class="flex gap-0.5">
+      <span class="flex h-2 w-2 animate-bounce rounded-full bg-gray-500"></span>
+      <span class="flex h-2 w-2 animate-bounce rounded-full bg-gray-500 animation-delay-100"></span>
+      <span class="flex h-2 w-2 animate-bounce rounded-full bg-gray-500 animation-delay-200"></span>
     </div>
   );
 }
